@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  seatunnel-master:
+    image: apache/seatunnel:2.3.8
+    container_name: seatunnel-master
+    volumes:
+      - ./config:/opt/seatunnel/config
+    networks:
+      - seatunnel-net
+    entrypoint: >
+      /bin/sh -c "
+      /opt/seatunnel/bin/seatunnel-cluster.sh -r master
+      "    
+    ports:
+      - "5801:5801"
+
+  seatunnel-client:
+    image: apache/seatunnel:2.3.8
+    container_name: seatunnel-client
+    depends_on:
+      - seatunnel-master
+    networks:
+      - seatunnel-net
+    environment:
+      - ST_DOCKER_MEMBER_LIST=seatunnel-master:5801  # 使用 container 名稱連接
+    volumes:
+      - ./config:/opt/seatunnel/config
+    command: ["./bin/seatunnel.sh", "-c", "config/my_job.conf","-m","local"]
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 2G
+    restart: "no"
+
+networks:
+  seatunnel-net:
+    driver: bridge
